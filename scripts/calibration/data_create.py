@@ -22,9 +22,9 @@ def main():
     cap.set(4,720)
     print("Done.")
 
-    path = os.getcwd() + '/../data/calibration/' + datetime.now().strftime("%d%m%Y%H%M%S") + '/'
+    path = os.getcwd() + '/../../data/calibration/' + datetime.now().strftime("%d%m%Y%H%M%S") + '/'
     os.mkdir(path)
-    pictNumber = 1
+    pictNumber = 1 if len(sys.argv) == 1 else sys.argv[1]
 
 
     print("Press s to save image")
