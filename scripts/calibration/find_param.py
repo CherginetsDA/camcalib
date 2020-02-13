@@ -1,11 +1,30 @@
+#!/usr/bin/env python
+
 # https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html
+
+import argparse
 import numpy as np
 import sys
 import cv2
 import glob
+import json
 
-def save_to_conf():
+parser = argparse.ArgumentParser(prog="Find param")
+parser.add_argument("path",help="Path to the picture set")
+parser.add_argument("-v","--video",action="store_true",help="Test video on")
+parser.add_argument("--version",action="version", version='%(prog)s 1.0')
+args = parser.parse_args()
+
+
+
+def save_to_conf(mtx, dist):
     print("Save koef to config file")
+    # device_name = input("Enter name of device:  ")
+    params = {"mtx":mtx, "dist":dist}
+    with open("../../config/"+"device_name"+".json", 'w') as f:
+        json.dump(params,f)
+
+
 
 def get_image_names(folder_path):
     return glob.glob((folder_path if folder_path[-1] == '/' else folder_path + '/') + '*.jpg')
@@ -27,19 +46,10 @@ def images_reserch(images):
 
         # Find the chess board corners
         ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
-
-        # If found, add object points, image points (after refining them)
-
         if ret == True:
             objpoints.append(objp)
-
             corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
             imgpoints.append(corners2)
-
-            # Draw and display the corners
-            # img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
-            # cv2.imshow('img',img)
-            # cv2.waitKey(500)
     return objpoints,imgpoints,gray.shape[::-1]
 
 def change_image_save(images, mtx, dist):
@@ -47,16 +57,50 @@ def change_image_save(images, mtx, dist):
         img = cv2.imread(fname)
         h,  w = img.shape[:2]
         newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-
-        # undistort
         dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
-
-        # crop the image
         x,y,w,h = roi
         dst = dst[y:y+h, x:x+w]
         cv2.imwrite(fname.replace('data','result'),dst)
 
-# termination criteria
+def video_test(mtx, dist):
+    if args.video:
+        cap = cv2.VideoCapture(0)
+        print("Opening camera...")
+        #check that camera is working
+        if not cap.isOpened():
+            cap.open()
+            if not cap.isOpened():
+                print("Can't find camera...")
+                exit()
+        print("Done.")
+
+        print("Change image parameters...")
+        # Set another size of capture
+        cap.set(3,1920)
+        cap.set(4,1080)
+        print("Done.")
+
+
+        print("Press s to save coef")
+        print("Press q to exit...")
+
+        kin = 'a'
+
+        while kin is not ord('q'):
+            ret,frame = cap.read()
+            if not ret == True:
+                continue
+            h,  w = frame.shape[:2]
+            newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+            dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+            cv2.imshow('Camera Data', frame)
+            kin = cv2.waitKey(1)
+            if  kin == ord('s'):
+                return True
+    else:
+        return True
+    return False
+
 def main():
     folder_path = sys.argv[1]
     print('Reserch images in ' + (folder_path if folder_path[-1] == '/' else folder_path + '/') + '...')
@@ -64,25 +108,27 @@ def main():
     images = get_image_names(folder_path)
     objpoints,imgpoints,shap = images_reserch(images)
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-
+    print("-"*25)
     print("Start calibration camera...")
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints,shap ,None,None)
-    if ret: print("Done.")
-
-    change_image_save(images, mtx, dist)
+    if ret:
+        print("Done.")
+    print("-"*25)
+    if video_test(mtx, dist):
+        print("-"*25)
+        change_image_save(images, mtx, dist)
+        # save_to_conf(mtx, dist)
 
     cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
     try:
-        if len(sys.argv) == 2:
-            main()
-        else:
-            print("Use: python find_param.py <data folder path>")
+        main()
     except KeyboardInterrupt:
         exit()
     # except:
     #     print("Something is wrong")
 
 # TODO: check that folder exist in result/calibration folder
+# TODO: add function for created config for device
