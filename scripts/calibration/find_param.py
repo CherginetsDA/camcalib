@@ -43,9 +43,10 @@ def images_reserch(images):
     for fname in images:
         img = cv2.imread(fname)
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 
         # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+        ret, corners = cv2.findChessboardCorners(blurred, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
         if ret == True:
             objpoints.append(objp)
             corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
@@ -76,8 +77,8 @@ def video_test(mtx, dist):
 
         print("Change image parameters...")
         # Set another size of capture
-        cap.set(3,1920)
-        cap.set(4,1080)
+        cap.set(3,600)
+        cap.set(4,600)
         print("Done.")
 
 
@@ -110,6 +111,7 @@ def main():
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     print("-"*25)
     print("Start calibration camera...")
+    print(len(objpoints))
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints,shap ,None,None)
     if ret:
         print("Done.")
