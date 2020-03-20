@@ -5,20 +5,22 @@ from datetime import datetime
 import os
 import numpy as np
 import time
+import json
 
 parser = argparse.ArgumentParser(prog="Data creater")
 parser.add_argument('--version', action='version', version='%(prog)s 1.1')
-# parser.add_argument('-H','--height', nargs="?", type=int, const=720, default=600, help="Set height of frame (pixels)")
-# parser.add_argument('-W','--width', nargs="?", type=int, const=1080, default=600, help="Set width of frame (pixels)")
 parser.add_argument('-n','--numb', nargs="?", type=int, const=100, default=50, help="Count of pictures")
 parser.add_argument('-s','--side', nargs="?", type=float, const=0.0285,default=1, help="Size of square")
-parser.add_argument('-c','--check', action="store_true", help="Check that algoritm can find chess board")
+parser.add_argument('-c','--conf', action="store_true", help="Config name and path to  save params")
 args = parser.parse_args()
 
 
+def save_camera_param(mtx,dist,newcammtx, filename='../../config/cam_param.json'):
+    json_text = json.dumps({"matrix_cam_param":mtx.tolist(),'new_matrix_cam_param':newcammtx.tolist(),'dist':dist.tolist()})
+    config_file =open(filename,'w')
+    config_file.write(json_text)
+    config_file.close()
 
-# Well, this script for creating data set. You just start it, look at screen and you'll see data from your camera, just press S and this frame going to save in data/calibration/<data and time then it was created> folder.
-# I hope I'll realized something much cooler then that (^.^)
 def main():
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     CHECKERBOARD = (6,9)
@@ -39,8 +41,6 @@ def main():
 
     print("Change image parameters...")
     # Set another size of capture
-    cap.set(3,args.width)
-    cap.set(4,args.height)
     print("Done.")
     pictNumber = args.numb
     pict = 1
@@ -52,17 +52,17 @@ def main():
         time_s = time.time()
         ret,frame = cap.read()
         if ret == False:
-            print("Read problem")
+            print("Read from camera problem")
             continue
         gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-        ret, corners = cv2.findChessboardCorners(blurred, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+        ret, corners = cv2.findChessboardCorners(blurred, CHECKERBOARD, cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
 
         if ret:
             cv2.putText(frame,"I SEE IT",(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2,cv2.LINE_AA)
             corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),criteria)
-            frame = cv2.drawChessboardCorners(frame, (6,9), corners2,ret)
-            if (time_s - check_time) > 0.1:
+            frame = cv2.drawChessboardCorners(frame, CHECKERBOARD, corners2,ret)
+            if (time_s - check_time) > 0.25:
                 objpoints.append(objp)
                 imgpoints.append(corners2)
                 pict += 1
@@ -77,7 +77,6 @@ def main():
             break
     h,w = frame.shape[:2]
 
-    cap.release()
     cv2.destroyAllWindows()
     print("Height is " + str(h))
     print("width is " + str(w))
@@ -88,6 +87,25 @@ def main():
     print(mtx)
     print("dist : \n")
     print(dist)
+    newcammtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+    x,y,w,h = roi
+
+    while kin != ord('q'):
+        ret,frame = cap.read()
+        if ret == False:
+            print("Read from camera problem")
+            continue
+        dst = cv2.undistort(frame,mtx,dist, None,newcammtx)
+        dst = dst[y:y+h, x:x+w]
+        cv2.imshow('After calibration', dst)
+        cv2.imshow('Camera Data', frame)
+        kin = cv2.waitKey(1)
+        if kin == ord('s'):
+            save_camera_param(mtx,dist,newcammtx)
+            # save_camera_param(mtx,dist,newcammtx,args.conf)
+            break
+
+    cap.release()
 
     print("Done.")
 
