@@ -36,9 +36,9 @@ def main():
         cv2.imshow('Thresh',thresh)
         kin = cv2.waitKey(1)
         if kin == ord('r'):
-            kkk+=1
+            kkk+=10
         elif kin == ord('f'):
-            kkk-=1
+            kkk-=10
 
     cv2.destroyAllWindows()
 

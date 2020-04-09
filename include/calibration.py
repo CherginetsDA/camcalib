@@ -3,8 +3,20 @@ import numpy as np
 import json
 import time
 
+def print_line(n=80):
+    print("-"*n)
+
 class calibration:
     def __init__(self,board_size=(6,9),pict = 150,conf='../../config/cam_param.json',side=0.0285):
+        print("The calibration settings:\n")
+        line_size = 40+1+len(conf)+5
+        print_line(line_size)
+        print("%-40s %d"%("Count of pictures for data set: ", pict))
+        print("%-40s (%d,%d)"%("Board size: ",board_size[0],board_size[1]))
+        print("%-40s %f"%("Size the side of board's square: ",side))
+        print("%-40s %s"%("Path to config file: ",conf))
+        print_line(line_size)
+        print("")
         self.CHECKERBOARD = board_size
         self.objpoints = []
         self.imgpoints = []
@@ -27,10 +39,10 @@ class calibration:
             if not self.cap.isOpened():
                 print("Can't find camera...")
                 exit()
-        print("Done.")
+        print("Done.\n")
 
     def save_camera_param(self):
-        json_text = json.dumps({"matrix_cam_param":self.mtx.tolist(),'new_matrix_cam_param':self.newcammtx.tolist(),'dist':dist.tolist()})
+        json_text = json.dumps({"matrix_cam_param":self.mtx.tolist(),'new_matrix_cam_param':self.newcammtx.tolist(),'dist':self.dist.tolist()})
         config_file =open(self.conf_name,'w')
         config_file.write(json_text)
         config_file.close()
@@ -39,8 +51,8 @@ class calibration:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         objp = np.zeros((1, self.CHECKERBOARD[0] * self.CHECKERBOARD[1], 3), np.float32)
         objp[0,:,:2] = np.mgrid[0:self.CHECKERBOARD[0], 0:self.CHECKERBOARD[1]].T.reshape(-1, 2)*self.side
-        print("\nPress s to save image")
-        print("Press q to exit...")
+        print("Press c to finish making data set")
+        print("Press e to exit...")
         pict = 0
         check_time = time.time()
         while(pict < self.pictNumber):
@@ -68,26 +80,36 @@ class calibration:
 
             kin = cv2.waitKey(1)
 
-            if  kin == ord('q'):
+            if  kin == ord('e'):
+                print("exit")
+                exit()
+            elif kin == ord('c'):
+                print("Interrupt making data set")
                 break
         h,w = frame.shape[:2]
 
         cv2.destroyAllWindows()
-        print("\nHeight is " + str(h))
-        print("width is " + str(w))
+        print("%-40s %d"%("\nHeight of the picture frame: ",h))
+        print("%-40s %d"%("\nWidth of the picture frame: ",w))
 
         print("\nStart culculated")
         ret, self.mtx, self.dist, rvecs, tvecs = cv2.calibrateCamera(self.objpoints, self.imgpoints, gray.shape[::-1], None, None)
-        print("\nCamera matrix : \n")
+        print("Done.\n")
+        print_line()
+        print("Camera matrix : \n")
         print(self.mtx)
-        print("\ndist : \n")
+        print("\nDistorsion coefficients: \n")
         print(self.dist)
+        print_line()
         self.newcammtx, self.roi = cv2.getOptimalNewCameraMatrix(self.mtx,self.dist,(w,h),1,(w,h))
 
     def test_calib(self):
+        print("Test calculated params")
         x,y,w,h = self.roi
         kin = 'a'
-        while kin != ord('q'):
+        print("\nPress s to save params")
+        print("Press e to exit...\n")
+        while kin != ord('e'):
             ret,frame = self.cap.read()
             if ret == False:
                 print("Read from camera problem")
@@ -98,7 +120,9 @@ class calibration:
             cv2.imshow('Camera Data', frame)
             kin = cv2.waitKey(1)
             if kin == ord('s'):
-                self.save_camera_param(self.mtx,self.dist,self.newcammtx)
+                print("Save params")
+                self.save_camera_param()
+                # self.save_camera_param(self.mtx,self.dist,self.newcammtx)
                 # save_camera_param(mtx,dist,newcammtx,args.conf)
                 break
 
