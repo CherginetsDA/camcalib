@@ -25,7 +25,7 @@ def sd_checkboard(corners, CHECKERBOARD):
         for j in xrange(CHECKERBOARD[1]):
             # Here I already know approx line y = kx + b, so I make right triangle
             # with side which parallel with axes. After that I found distance
-            # from point to line use area of triangle
+            # from point to line use area of triangle 
             y = k*X[j] + b
             x = (Y[j]-b)/k
             side_b = np.absolute(X[j] - x)

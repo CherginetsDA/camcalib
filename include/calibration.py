@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import json
 import time
+import sys
+
+DISTANCE_POINT_TO_LINE = 1
 
 def print_line(n=80):
     print("-"*n)
@@ -23,6 +26,7 @@ class calibration:
         self.pictNumber = pict
         self.conf_name = conf
         self.side = side
+        self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     def calibrate(self):
         self.camera_open()
@@ -48,7 +52,7 @@ class calibration:
         config_file.close()
 
     def data_set_create(self):
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
         objp = np.zeros((1, self.CHECKERBOARD[0] * self.CHECKERBOARD[1], 3), np.float32)
         objp[0,:,:2] = np.mgrid[0:self.CHECKERBOARD[0], 0:self.CHECKERBOARD[1]].T.reshape(-1, 2)*self.side
         print("Press c to finish making data set")
@@ -67,7 +71,7 @@ class calibration:
 
             if ret:
                 cv2.putText(frame,"I SEE IT",(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2,cv2.LINE_AA)
-                corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),criteria)
+                corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),self.criteria)
                 frame = cv2.drawChessboardCorners(frame, self.CHECKERBOARD, corners2,ret)
                 if (time_s - check_time) > 0.25:
                     self.objpoints.append(objp)
@@ -103,6 +107,40 @@ class calibration:
         print_line()
         self.newcammtx, self.roi = cv2.getOptimalNewCameraMatrix(self.mtx,self.dist,(w,h),1,(w,h))
 
+    def distance_point_to_line_metric(self,corners):
+        sd = np.zeros(self.CHECKERBOARD[0] * self.CHECKERBOARD[1], np.float32)
+        for n in xrange(self.CHECKERBOARD[0]):
+            line = corners[n::self.CHECKERBOARD[0]]
+            Y = np.array(list(map(lambda x: x[0][1],line.tolist())))
+            X = np.array(list(map(lambda x: x[0][0],line.tolist())))
+            N = len(X)
+
+            k = (N*(X*Y).sum() - X.sum()*Y.sum())/(N*(X**2).sum() - X.sum()**2)
+            b = (Y.sum() - k*X.sum())/N
+            for j in xrange(self.CHECKERBOARD[1]):
+                # Here I already know approx line y = kx + b, so I make right triangle
+                # with side which parallel with axes. After that I found distance
+                # from point to line use area of triangle
+                y = k*X[j] + b
+                x = (Y[j]-b)/k
+                side_b = np.absolute(X[j] - x)
+                side_c = np.absolute(Y[j] - y)
+                side_a = np.sqrt(side_b**2 + side_c**2)
+                sd[n*self.CHECKERBOARD[1] + j] = side_b*side_c/side_a
+        return sd.sum()/(self.CHECKERBOARD[0] * self.CHECKERBOARD[1])
+
+    def use_metric(self,frame,metric):
+        if metric == DISTANCE_POINT_TO_LINE:
+            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+            ret, corners = cv2.findChessboardCorners(blurred, self.CHECKERBOARD, cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+            if ret:
+                cv2.putText(frame,"I SEE IT",(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2,cv2.LINE_AA)
+                corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),self.criteria)
+                sys.stdout.write("\b")
+                sys.stdout.write('Metric value: %f\r' % self.distance_point_to_line_metric(corners2))
+                sys.stdout.flush()
+
     def test_calib(self):
         print("Test calculated params")
         x,y,w,h = self.roi
@@ -117,15 +155,12 @@ class calibration:
             dst = cv2.undistort(frame,self.mtx,self.dist, None,self.newcammtx)
             dst = dst[y:y+h, x:x+w]
             cv2.imshow('After calibration', dst)
-            cv2.imshow('Camera Data', frame)
+            self.use_metric(dst,DISTANCE_POINT_TO_LINE)
             kin = cv2.waitKey(1)
             if kin == ord('s'):
                 print("Save params")
                 self.save_camera_param()
-                # self.save_camera_param(self.mtx,self.dist,self.newcammtx)
-                # save_camera_param(mtx,dist,newcammtx,args.conf)
                 break
-
 
     def camera_close(self):
         self.cap.release()

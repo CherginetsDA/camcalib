@@ -3,6 +3,7 @@ import argparse
 import cv2
 import numpy as np
 import json
+import sys
 
 parser = argparse.ArgumentParser(prog="Data creater")
 parser.add_argument('--version', action='version', version='%(prog)s 1.1')
@@ -63,14 +64,17 @@ def main():
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         dst = cv2.undistort(blurred,mtx,dist, None,newcammtx)
         ret, corners = cv2.findChessboardCorners(blurred, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
-        if ret:
-            corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),criteria)
-            frame = cv2.drawChessboardCorners(frame, (6,9), corners2,ret)
-            print(sd_checkboard(corners2, (6,9)))
-        ret, corners = cv2.findChessboardCorners(dst, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+        # if ret:
+        #     corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),criteria)
+        #     frame = cv2.drawChessboardCorners(frame, (6,9), corners2,ret)
+        #     print(sd_checkboard(corners2, (6,9)))
+        # ret, corners = cv2.findChessboardCorners(dst, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
         if ret:
             corners2 = cv2.cornerSubPix(dst,corners,(11,11),(-1,-1),criteria)
-            print(sd_checkboard(corners2, (6,9)))
+
+            sys.stdout.write("\b")
+            sys.stdout.write('Metric value %f\r' % sd_checkboard(corners2, (6,9)))
+            sys.stdout.flush()
         # dst = cv2.undistort(frame,mtx,dist, None,newcammtx)
         # cv2.imshow('After calibration', dst)
         cv2.imshow('Camera Data', frame)
