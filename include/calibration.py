@@ -6,6 +6,13 @@ import sys
 
 DISTANCE_POINT_TO_LINE = 1
 
+
+## I add that three variables, because now in OpenCV they're defined as long (8L,4L,1L). And that make in function findchessboardcorners a mistake.
+CALIB_CB_FAST_CHECK = 8
+CALIB_CB_ADAPTIVE_THRESH = 1
+CALIB_CB_FILTER_QUADS = 4
+
+
 def print_line(n=80):
     print("-"*n)
 
@@ -67,7 +74,7 @@ class calibration:
                 continue
             gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
             blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-            ret, corners = cv2.findChessboardCorners(blurred, self.CHECKERBOARD, cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+            ret, corners = cv2.findChessboardCorners(blurred, self.CHECKERBOARD, CALIB_CB_FAST_CHECK + CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_FILTER_QUADS)
 
             if ret:
                 cv2.putText(frame,"I SEE IT",(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2,cv2.LINE_AA)
@@ -133,7 +140,7 @@ class calibration:
         if metric == DISTANCE_POINT_TO_LINE:
             gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
             blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-            ret, corners = cv2.findChessboardCorners(blurred, self.CHECKERBOARD, cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+            ret, corners = cv2.findChessboardCorners(blurred, self.CHECKERBOARD, CALIB_CB_FAST_CHECK + CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_FILTER_QUADS)
             if ret:
                 cv2.putText(frame,"I SEE IT",(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),2,cv2.LINE_AA)
                 corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),self.criteria)
