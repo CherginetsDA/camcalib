@@ -56,13 +56,12 @@ def main():
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         dst = cv2.undistort(blurred,mtx,dist, None,newcammtx)
-        ret, corners = cv2.findChessboardCorners(blurred, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
-        print('--------------------------')
+        ret, corners = cv2.findChessboardCorners(blurred, (6,9), flags=cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
         if ret:
             corners2 = cv2.cornerSubPix(blurred,corners,(11,11),(-1,-1),criteria)
             frame = cv2.drawChessboardCorners(frame, (6,9), corners2,ret)
             print(sd_checkboard(corners2, (6,9)))
-        ret, corners = cv2.findChessboardCorners(dst, (6,9), cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
+        ret, corners = cv2.findChessboardCorners(dst, (6,9), flags=cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FILTER_QUADS)
         if ret:
             corners2 = cv2.cornerSubPix(dst,corners,(11,11),(-1,-1),criteria)
             print(sd_checkboard(corners2, (6,9)))
